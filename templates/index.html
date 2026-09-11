@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ShipIt — Label Printer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #fafafa;
+    --surface: #fff;
+    --border: #e0e0e0;
+    --border-focus: #2563eb;
+    --text: #1a1a1a;
+    --text-muted: #6b6b6b;
+    --text-light: #999;
+    --accent: #2563eb;
+    --accent-hover: #1d4ed8;
+    --danger: #dc2626;
+    --danger-bg: #fef2f2;
+    --success: #16a34a;
+    --success-bg: #f0fdf4;
+    --warn: #d97706;
+    --warn-bg: #fffbeb;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'DM Sans', system-ui, sans-serif;
+  }
+
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--surface);
+  }
+
+  header h1 {
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  header h1 span {
+    color: var(--text-muted);
+    font-weight: 400;
+    margin-left: 6px;
+  }
+
+  .status-pill {
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 100px;
+    background: #f0f0f0;
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+  }
+
+  .status-pill.online {
+    background: var(--success-bg);
+    color: var(--success);
+    border-color: #bbf7d0;
+  }
+
+  .status-pill.offline {
+    background: var(--danger-bg);
+    color: var(--danger);
+    border-color: #fecaca;
+  }
+
+  main {
+    flex: 1;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 48px 24px;
+  }
+
+  .container {
+    width: 100%;
+    max-width: 560px;
+  }
+
+  /* Upload area */
+  .upload-zone {
+    border: 1.5px dashed var(--border);
+    border-radius: 6px;
+    padding: 40px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    background: var(--surface);
+  }
+
+  .upload-zone:hover,
+  .upload-zone.dragover {
+    border-color: var(--border-focus);
+    background: #f8faff;
+  }
+
+  .upload-zone p {
+    font-size: 14px;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+
+  .upload-zone small {
+    font-size: 12px;
+    color: var(--text-light);
+  }
+
+  .upload-zone input { display: none; }
+
+  .btn-row {
+    margin-top: 16px;
+    display: flex;
+    gap: 8px;
+  }
+
+  .btn {
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 500;
+    padding: 8px 16px;
+    border-radius: 5px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+    transition: background 0.1s, border-color 0.1s;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+
+  .btn:hover { background: #f5f5f5; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+
+  .btn-primary:hover {
+    background: var(--accent-hover);
+    border-color: var(--accent-hover);
+  }
+
+  .btn-primary:disabled {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+
+  .btn-full { flex: 1; }
+
+  /* Preview */
+  .preview-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  .preview-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .preview-header h2 {
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  .preview-header .dims {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-light);
+    background: #f5f5f5;
+    padding: 2px 8px;
+    border-radius: 3px;
+  }
+
+  .preview-body {
+    padding: 24px;
+    display: flex;
+    justify-content: center;
+    background: #f5f5f5;
+  }
+
+  .label-frame {
+    width: 240px;
+    aspect-ratio: 4/6;
+    background: #fff;
+    border: 1px solid var(--border);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  }
+
+  .label-frame img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+  }
+
+  .preview-actions {
+    padding: 12px 16px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 8px;
+  }
+
+  /* Messages */
+  .msg {
+    padding: 10px 14px;
+    border-radius: 5px;
+    font-size: 13px;
+    margin-bottom: 16px;
+    border: 1px solid;
+  }
+
+  .msg-error {
+    background: var(--danger-bg);
+    border-color: #fecaca;
+    color: var(--danger);
+  }
+
+  .msg-success {
+    background: var(--success-bg);
+    border-color: #bbf7d0;
+    color: var(--success);
+  }
+
+  .msg-success code {
+    font-family: var(--mono);
+    font-size: 12px;
+    background: #dcfce7;
+    padding: 1px 5px;
+    border-radius: 3px;
+  }
+
+  .msg-warn {
+    background: var(--warn-bg);
+    border-color: #fde68a;
+    color: var(--warn);
+  }
+
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 10px 24px;
+    font-size: 11px;
+    color: var(--text-light);
+    font-family: var(--mono);
+    display: flex;
+    gap: 16px;
+    background: var(--surface);
+  }
+
+  /* Loading overlay */
+  .loading-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(255,255,255,0.8);
+    z-index: 100;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .loading-overlay.active {
+    display: flex;
+  }
+
+  .loading-overlay .spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loading">
+  <div class="spinner"></div>
+</div>
+
+<header>
+  <h1>ShipIt<span>label printer</span></h1>
+  {% if printer_status and printer_status.online %}
+  <div class="status-pill online">{{ printer_name }}</div>
+  {% else %}
+  <div class="status-pill offline">{{ printer_name }} &mdash; offline</div>
+  {% endif %}
+</header>
+
+<main>
+<div class="container">
+
+  {% if error %}
+  <div class="msg msg-error">{{ error }}</div>
+  {% endif %}
+
+  {% if printed %}
+  <div class="msg msg-success">Sent to printer &mdash; <code>{{ printer_info }}</code></div>
+  {% endif %}
+
+  {% if printer_status and not printer_status.online and preview %}
+  <div class="msg msg-warn">Printer is {{ printer_status.status }}. You can still download the PDF and print manually.</div>
+  {% endif %}
+
+  {% if preview %}
+  <div class="preview-card">
+    <div class="preview-header">
+      <h2>Preview</h2>
+      <span class="dims">4 x 6 in</span>
+    </div>
+    <div class="preview-body">
+      <div class="label-frame">
+        <img src="data:image/png;base64,{{ preview }}" alt="Label">
+      </div>
+    </div>
+    <div class="preview-actions">
+      {% if printer_status and printer_status.online %}
+      <form method="post" action="/print/{{ file_id }}" style="flex:1" id="print-form">
+        <button type="submit" class="btn btn-primary btn-full" id="print-btn">Print</button>
+      </form>
+      {% endif %}
+      <a href="/download/{{ file_id }}" class="btn btn-full">Download</a>
+      <a href="/" class="btn btn-full">New</a>
+    </div>
+  </div>
+
+  {% else %}
+  <form method="post" action="/upload" enctype="multipart/form-data" id="upload-form">
+    <div class="upload-zone" id="drop-zone">
+      <p>Drop a PDF here, or click to browse</p>
+      <small>Shipping labels only &mdash; output is 4 x 6 in</small>
+      <input type="file" id="file-input" name="file" accept=".pdf" required>
+    </div>
+    <div class="btn-row">
+      <button type="submit" class="btn btn-primary btn-full" id="upload-btn">Process label</button>
+    </div>
+  </form>
+  {% endif %}
+
+</div>
+</main>
+
+<footer>
+  <span>printer: {{ printer_name }}</span>
+  <span>label: 4x6 in</span>
+  <span>max: 20 MB</span>
+</footer>
+
+<script>
+  const dropZone = document.getElementById('drop-zone');
+  const fileInput = document.getElementById('file-input');
+  const uploadForm = document.getElementById('upload-form');
+  const uploadBtn = document.getElementById('upload-btn');
+  const printBtn = document.getElementById('print-btn');
+  const printForm = document.getElementById('print-form');
+  const loading = document.getElementById('loading');
+
+  function showLoading() {
+    if (loading) loading.classList.add('active');
+  }
+
+  // Upload form: show loading on submit
+  if (uploadForm) {
+    uploadForm.addEventListener('submit', function() {
+      if (uploadBtn) { uploadBtn.disabled = true; uploadBtn.textContent = 'Processing...'; }
+      showLoading();
+    });
+  }
+
+  // Print form: prevent double-click
+  if (printForm) {
+    printForm.addEventListener('submit', function() {
+      if (printBtn) { printBtn.disabled = true; printBtn.textContent = 'Printing...'; }
+      showLoading();
+    });
+  }
+
+  // Drop zone interactions
+  if (dropZone && fileInput) {
+    dropZone.addEventListener('click', () => fileInput.click());
+
+    fileInput.addEventListener('change', () => {
+      if (fileInput.files.length) uploadForm.submit();
+    });
+
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.classList.add('dragover');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+      dropZone.classList.remove('dragover');
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('dragover');
+      if (e.dataTransfer.files.length) {
+        fileInput.files = e.dataTransfer.files;
+        uploadForm.submit();
+      }
+    });
+  }
+</script>
+</body>
+</html>
