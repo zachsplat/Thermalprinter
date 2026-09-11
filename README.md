@@ -43,10 +43,20 @@ pip3 install flask pymupdf pillow numpy
 
 The app expects a CUPS printer queue named `Y42BT_TSPL` with a 4×6 inch page size (`w288h432`).
 
-If you have the Xprinter TSPL CUPS filter installed:
+The `driver/` directory contains the required files:
+
+- `Y42BT_TSPL.ppd` — PPD file for the YXWL Y42BT thermal printer
+- `xprinter-tspl` — CUPS filter (Python) that converts PDF to TSPL commands
+
+Install the filter and create the queue:
 
 ```bash
-lpadmin -p "Y42BT_TSPL" -E -v "usb:///Y42BT?serial=0000000" -P /path/to/Y42BT_TSPL.ppd
+# Install the CUPS filter
+sudo cp driver/xprinter-tspl /usr/lib/cups/filter/xprinter-tspl
+sudo chmod +x /usr/lib/cups/filter/xprinter-tspl
+
+# Create the printer queue (adjust USB URI for your device)
+lpadmin -p "Y42BT_TSPL" -E -v "usb:///Y42BT?serial=0000000" -P driver/Y42BT_TSPL.ppd
 ```
 
 Verify the printer is detected:
@@ -121,6 +131,8 @@ tailscale ip -4
 - `templates/index.html` — Web UI
 - `gen_packing_slip.py` — Packing slip PDF generator for BThrifty Online
 - `test_app.py` — Test suite
+- `driver/Y42BT_TSPL.ppd` — PPD file for the YXWL Y42BT thermal printer
+- `driver/xprinter-tspl` — CUPS filter (PDF → TSPL)
 
 ## License
 
